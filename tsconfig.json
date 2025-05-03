@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "target": "ESNext",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "allowJs": true,
+    "strict": true,
+    "baseUrl": "./",  
+    "paths": {
+      "*": ["node_modules/*", "csv-query-server/src/*"]  
+    }
+  },
+  "include": [
+    "csv-query-server/src/**/*"
+  ]
+}
