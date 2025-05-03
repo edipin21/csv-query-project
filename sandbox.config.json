@@ -1,11 +1,11 @@
 {
   "template": "node",
   "startScript": "start",
-  "infiniteLoopProtection": false,
   "view": "browser",
   "container": {
     "ports": {
-      "3000": "preview"
+      "3000": "preview",
+      "3001": "server"
     }
   }
 }
