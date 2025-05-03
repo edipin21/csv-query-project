@@ -1,3 +1,4 @@
 {
-    "startScript": "start"
+  "template": "node",
+  "startScript": "start"
 }
