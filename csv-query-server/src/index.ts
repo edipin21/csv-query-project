@@ -14,7 +14,7 @@ app.use(express.json());
 const cache: Record<string, { records: any[]; timestamp: number }> = {};
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 const TABLE_NAME = "data";
-const MAX_FILE_SIZE_IN_MB = 50;
+const MAX_FILE_SIZE_IN_MB = 10;
 
 setInterval(() => {
   const now = Date.now();
@@ -56,8 +56,24 @@ app.post("/run-query", async (req, res) => {
       rows: result,
     });
   } catch (e: any) {
-    console.error(e);
-    res.status(400).json({ error: e.message });
+    if (e.message.includes("larger than the allowed maximum size")) {
+      res.status(413).json({ error: e.message });
+      return;
+    }
+    if (e.message.includes("Failed to fetch CSV")) {
+      res.status(404).json({ error: e.message });
+      return;
+    }
+
+    if (
+      e.message === "Failed to parse CSV." ||
+      e.message.includes("Query executed, but no matching columns")
+    ) {
+      res.status(400).json({ error: e.message });
+      return;
+    }
+
+    res.status(500).json({ error: e.message });
   }
 });
 
