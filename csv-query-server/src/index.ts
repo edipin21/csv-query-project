@@ -2,6 +2,8 @@ import express, { Request, Response } from "express";
 import { parse } from "csv-parse/sync";
 import alasql from "alasql";
 import cors from "cors";
+import https from "https";
+import http from "http";
 
 const app = express();
 const port = 3001;
@@ -12,6 +14,7 @@ app.use(express.json());
 const cache: Record<string, { records: any[]; timestamp: number }> = {};
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 const TABLE_NAME = "data";
+const MAX_FILE_SIZE_IN_MB = 50;
 
 setInterval(() => {
   const now = Date.now();
@@ -38,6 +41,7 @@ app.post("/run-query", async (req, res) => {
         .json({ error: validation.errors.csvUrl ?? validation.errors.query });
       return;
     }
+    await checkFileSize(csvUrl);
 
     const records = await getCachedOrFreshRecords(csvUrl);
 
@@ -181,4 +185,52 @@ function validateInputs(csvUrl?: string, query?: string): ValidationResult {
     isValid: Object.keys(errors).length === 0,
     errors,
   };
+}
+function getFileSize(csvUrl: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    try {
+      const url = new URL(csvUrl);
+      const protocol = url.protocol === "https:" ? https : http;
+
+      protocol
+        .request(
+          {
+            method: "HEAD",
+            hostname: url.hostname,
+            path: url.pathname,
+            headers: {},
+          },
+          (response) => {
+            const contentLength = response.headers["content-length"];
+            if (contentLength) {
+              resolve(parseInt(contentLength, 10));
+            } else {
+              reject(new Error("Could not retrieve content-length"));
+            }
+          }
+        )
+        .on("error", (err) => reject(err))
+        .end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+async function checkFileSize(csvUrl: string): Promise<void> {
+  try {
+    const fileSize = await getFileSize(csvUrl);
+
+    const fileSizeInMB = fileSize / (1024 * 1024);
+
+    if (fileSizeInMB > MAX_FILE_SIZE_IN_MB) {
+      throw new Error(
+        `The file at the provided URL is larger than the allowed maximum size of ${MAX_FILE_SIZE_IN_MB} MB. The file size is: ${fileSizeInMB.toFixed(
+          2
+        )} MB`
+      );
+    }
+  } catch (error: any) {
+    throw error;
+  }
 }
